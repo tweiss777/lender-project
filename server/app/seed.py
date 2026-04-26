@@ -1,4 +1,5 @@
 from app.database import engine, SessionLocal
+from sqlalchemy import text
 from app.models.base import Base
 from app.models.Borrower import Borrower
 from app.models.LoanRequest import LoanRequest, LoanRequestStatus
@@ -11,7 +12,6 @@ from app.models.LenderAllowedState import LenderAllowedState
 from app.models.LenderExcludedIndustry import LenderExcludedIndustry
 from app.models.LenderExcludedState import LenderExcludedState
 from app.models.LenderEquipmentRestriction import LenderEquipmentRestriction
-from app.models.MatchResult import MatchResult, MatchStatus
 
 
 def seed():
@@ -237,6 +237,14 @@ def seed():
         for policy_id in [10, 11, 12]:
             for industry in stearns_excluded_industries:
                 db.add(LenderExcludedIndustry(policy_id=policy_id, industry=industry))
+
+        # Sync sequences after inserting explicit PKs so future auto-inserts don't conflict
+        for table, col in [("lender_policies", "policy_id"), ("lenders", "lender_id"),
+                           ("borrowers", "borrower_id"), ("loan_requests", "loan_request_id"),
+                           ("business_credits", "bc_id"), ("personal_guarantors", "guarantor_id")]:
+            db.execute(text(
+                f"SELECT setval(pg_get_serial_sequence('{table}', '{col}'), MAX({col})) FROM {table}"
+            ))
 
         db.commit()
         print("✓ Seeded database.")
