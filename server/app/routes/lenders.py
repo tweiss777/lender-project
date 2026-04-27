@@ -15,6 +15,31 @@ from app.services.pdf_parser import parse_lender_pdf
 lender_routes = APIRouter()
 
 
+@lender_routes.get("/")
+def list_lenders(db: Session = Depends(get_db)):
+    lenders = db.query(Lender).all()
+    return [
+        {
+            "lender_id": l.lender_id,
+            "lender_name": l.lender_name,
+            "policies": [
+                {
+                    "policy_id": p.policy_id,
+                    "program_name": p.program_name,
+                    "min_fico": p.min_fico,
+                    "min_paynet_score": p.min_paynet_score,
+                    "min_years_in_business": p.min_years_in_business,
+                    "min_loan_amount": p.min_loan_amount,
+                    "max_loan_amount": p.max_loan_amount,
+                    "max_equipment_age_years": p.max_equipment_age_years,
+                }
+                for p in l.policies
+            ],
+        }
+        for l in lenders
+    ]
+
+
 @lender_routes.post("/parse", response_model=LenderPreview)
 async def parse_lender_pdf_route(file: UploadFile = File(...)):
     """

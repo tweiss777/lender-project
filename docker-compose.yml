@@ -1,0 +1,51 @@
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kaaj
+      POSTGRES_PASSWORD: kaaj
+      POSTGRES_DB: kaaj
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kaaj_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kaaj"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./server
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - kaaj_network
+    # Seed the database on first start
+    command: >
+      sh -c "python -m app.seed && uvicorn main:app --host 0.0.0.0 --port 3000"
+
+  client:
+    build:
+      context: ./client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    networks:
+      - kaaj_network
+
+volumes:
+  postgres_data:
+
+networks:
+  kaaj_network:
+    driver: bridge
