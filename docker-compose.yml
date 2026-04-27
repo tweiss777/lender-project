@@ -21,8 +21,12 @@ services:
     build:
       context: ./server
     restart: unless-stopped
-    env_file:
-      - ./server/.env
+    environment:
+      CONNECTION_STRING: postgresql://kaaj:kaaj@db:5432/kaaj
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      PORT: 3000
+      # Allow requests from the nginx client container
+      CORS_ORIGINS: http://client:80,http://localhost:80
     depends_on:
       db:
         condition: service_healthy
